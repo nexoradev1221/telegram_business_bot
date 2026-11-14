@@ -1,8 +1,11 @@
-# Daily implementation task — ready to configure
+# Daily implementation task — active
 
-**Status: NOT SCHEDULED.** This file documents configuration; it does not register a task.
+**Status: ACTIVE.** Created through the app scheduling tool and verified on 2026-11-14.
+Automation ID: `implement-telegram-business-bot-14-days`.
+The daily task resumes this conversation and follows plan.md during November 15–28.
+No implementation was started during setup. Review runs in the app's Scheduled view.
 
-In the desktop app's **Scheduled** view, create one project-scoped task with these settings:
+Saved schedule reference (do not create a duplicate):
 
 - Title: Implement Telegram business bot — 14-day plan
 - Project: `D:\Portfolio\telegram_business_bot`

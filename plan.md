@@ -10,8 +10,11 @@ Planned implementation: **14 days, 2026-11-15 through 2026-11-28**, daily at
 **10:00 Asia/Vladivostok (UTC+10)**. Day 1 begins tomorrow, never during this planning session.
 This is a delivery target, not a guarantee of unattended execution or completion.
 
-**Scheduling status: NOT CREATED.** This session exposes no local scheduled-task creation tool.
-The exact app setup and reusable task prompt are in scheduled-task.md. A saved prompt is not an active automation.
+**Scheduling status: ACTIVE**, created and verified in the app on 2026-11-14.
+Automation ID: `implement-telegram-business-bot-14-days`; daily at 10:00 Asia/Vladivostok,
+with the final occurrence on 2026-11-28. The task resumes this conversation.
+The task instructions enforce the implementation window of November 15–28.
+The schedule reference and reusable task prompt are in scheduled-task.md.
 Future runs must have workspace write access, working GitHub credentials, and permission to fetch/push.
 Today GitHub CLI worked with approved network access; unattended network access must be checked separately.
 
@@ -177,3 +180,4 @@ until its date to fix a dependency. Work on the earliest unfinished dependency f
 | Date | Work and verification | Blockers / next step |
 | --- | --- | --- |
 | 2026-11-14 | Read all requirements; created public GitHub repository; prepared analysis, 14-day plan and schedule prompt. No application code implemented. | Local app schedule cannot be created with this session's tools. Activate it manually with scheduled-task.md; implementation starts Nov 15. |
+| 2026-11-14 | Subsequently created the daily app task using newly available app tools; verified ACTIVE status and saved recurrence through Nov 28, attached to this conversation. | Earlier scheduling blocker resolved. Implementation starts Nov 15 at 10:00 Asia/Vladivostok; unattended GitHub permissions remain subject to runtime policy. |
