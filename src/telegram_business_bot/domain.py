@@ -120,13 +120,15 @@ def parse_visit_window(value: str, *, now: datetime, timezone: ZoneInfo) -> Visi
         end = datetime.fromisoformat(f"{day}T{end_text}")
     except ValueError:
         raise RequestValidationError("visit_window", "Укажите существующие дату и время.") from None
+    local_today = now.astimezone(timezone).date()
+    if not local_today <= start.date() <= local_today + timedelta(days=MAX_VISIT_DAYS):
+        raise RequestValidationError("visit_window", "Выберите будущее время в ближайшие 30 дней.")
     start_utc, end_utc = _localize(start, timezone), _localize(end, timezone)
     if end_utc <= start_utc:
         raise RequestValidationError(
             "visit_window", "Конец окна должен быть позже начала в тот же день."
         )
-    local_today = now.astimezone(timezone).date()
-    if start_utc <= now or start.date() > local_today + timedelta(days=MAX_VISIT_DAYS):
+    if start_utc <= now:
         raise RequestValidationError("visit_window", "Выберите будущее время в ближайшие 30 дней.")
     return VisitWindow(start_utc, end_utc)
 

@@ -121,6 +121,8 @@ def test_custom_catalog_is_supported_without_mutating_defaults():
         "2026-11-16 10:00-12:00",
         "2026-12-17 09:00-12:00",
         "tomorrow morning",
+        "0001-01-01 00:00-01:00",
+        "9999-12-31 23:00-23:30",
     ],
 )
 def test_invalid_visit_windows(text):
