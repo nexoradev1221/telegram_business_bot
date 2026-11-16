@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools==84.2.1", "wheel==0.48.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "telegram-business-bot"
+version = "0.1.0.dev0"
+description = "Russian-language appliance repair requests with an offline simulator"
+requires-python = ">=3.12,<3.13"
+dependencies = ["aiogram==3.32.0", "tzdata==2026.6"]
+
+[project.scripts]
+telegram-business-bot = "telegram_business_bot.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
