@@ -5,9 +5,9 @@ Repository: https://github.com/nexoradev1221/telegram_business_bot
 
 ## Current state and delivery window
 
-Planning only today. No application, dependency installation, or implementation tests have been started.
+Planning was completed on 2026-11-14. Implementation began on 2026-11-16; actual progress and evidence are recorded below.
 Planned implementation: **14 days, 2026-11-15 through 2026-11-28**, daily at
-**10:00 Asia/Vladivostok (UTC+10)**. Day 1 begins tomorrow, never during this planning session.
+**10:00 Asia/Vladivostok (UTC+10)**. The implementation window begins November 15; no implementation was performed during planning.
 This is a delivery target, not a guarantee of unattended execution or completion.
 
 **Scheduling status: ACTIVE**, created and verified in the app on 2026-11-14.
@@ -129,7 +129,7 @@ until its date to fix a dependency. Work on the earliest unfinished dependency f
 
 | Day/date (2026) | Branch suggestion | Deliverable and exit checks | State |
 | --- | --- | --- | --- |
-| 1 / Nov 15 | chore/project-foundation | Verify official dependency docs; package/CLI skeleton, pinned dependencies, config validation, sample env, lint/test CI; fresh setup and no-token startup checks | Pending |
+| 1 / Nov 15 | chore/project-foundation | Verify official dependency docs; package/CLI skeleton, pinned dependencies, config validation, sample env, lint/test CI; fresh setup and no-token startup checks | Complete on Nov 16; PR #3 |
 | 2 / Nov 16 | feat/request-domain | Request fields, Russian categories, consent, contact/window validation, transition policy; valid/invalid boundary tests | Pending |
 | 3 / Nov 17 | feat/sqlite-storage | Initial migration, transactions, unique references/idempotency keys, request/history persistence; restart, duplicate and concurrent submission tests | Pending |
 | 4 / Nov 18 | feat/russian-guided-form | /start, /help, guided collection and consent; mocked update tests, invalid input recovery | Pending |
@@ -181,3 +181,5 @@ until its date to fix a dependency. Work on the earliest unfinished dependency f
 | --- | --- | --- |
 | 2026-11-14 | Read all requirements; created public GitHub repository; prepared analysis, 14-day plan and schedule prompt. No application code implemented. | Local app schedule cannot be created with this session's tools. Activate it manually with scheduled-task.md; implementation starts Nov 15. |
 | 2026-11-14 | Subsequently created the daily app task using newly available app tools; verified ACTIVE status and saved recurrence through Nov 28, attached to this conversation. | Earlier scheduling blocker resolved. Implementation starts Nov 15 at 10:00 Asia/Vladivostok; unattended GitHub permissions remain subject to runtime policy. |
+
+| 2026-11-16 | Foundation catch-up: Python 3.12.10 package, aiogram 3.32.0 and fully pinned dependencies, validated config/sample env, Russian CLI configuration check, Linux/Windows CI. Commits `81d9133`, `6c875e8` pushed to `chore/project-foundation`; PR https://github.com/nexoradev1221/telegram_business_bot/pull/3. Local lint passes, 20 tests pass, no-token smoke check passes; wheel/sdist build passes. Documented setup reproduced in a second clean environment with 20 passing tests. Fixed real cp950 Russian-output failure with subprocess regression. | No Nov 15 implementation was found in Git history; resumed earliest prerequisite. CI and PR integration are checked before merge. Next: Nov 16 request-domain milestone. AT-01–04 remain unimplemented. |
