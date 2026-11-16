@@ -1,7 +1,7 @@
 # Telegram Business Bot
 
 Standalone Russian-language appliance repair request bot. **Under construction:** configuration
-validation and package foundation are available. Guided requests, storage, live polling and the
+validation, request-domain rules and package foundation are available. Guided requests, storage, live polling and the
 end-to-end simulator are scheduled in [plan.md](plan.md); they do not work yet.
 
 ## Setup (Windows PowerShell)
@@ -41,3 +41,25 @@ Reviewed November 16, 2026: [aiogram 3.32 documentation](https://docs.aiogram.de
 [Python virtual environments](https://docs.python.org/3.12/library/venv.html), and
 [Telegram Bot API](https://core.telegram.org/bots/api). The pinned aiogram version is verified
 by installation; baseline handlers will use only the required supported API methods.
+
+## Request rules (domain layer implemented; conversation integration pending)
+
+Categories and districts have Russian demo labels and an `other` fallback. They are fictional
+service-area defaults; adapters can supply an alternate catalog to request validation. Do not
+promise service availability from these labels. Collect requests in a private Telegram chat
+using authenticated sender IDs, never a customer-supplied owner ID.
+
+A request needs explicit consent, a 5–1000 character problem summary, and either Telegram chat
+contact (no public username required) or an international phone number beginning with `+` and
+8–15 digits. Phone validation checks format only, not ownership, carrier or country-code validity.
+The Telegram option discards unneeded phone details. Domain representations omit personal fields.
+
+Visit preference format: `YYYY-MM-DD HH:MM-HH:MM`, in SERVICE_TIMEZONE (default
+Asia/Vladivostok), with the end later than the start on the same day. The start must be in the
+future and within the next 30 local calendar days, inclusive. Ambiguous/nonexistent DST times
+are rejected. A preference is not a confirmed appointment. Consent timestamp and version are
+prepared only on explicit validation of the final draft; database persistence comes next.
+
+Lifecycle: new -> contacted -> scheduled -> closed, with direct closure also allowed from new
+or contacted. Repeating the current status is harmless; backwards transitions/reopening are
+rejected. Dispatcher authentication and persistence will be added in later milestones.
