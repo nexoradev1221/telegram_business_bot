@@ -1,4 +1,7 @@
+import os
 import socket
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -90,3 +93,16 @@ def test_cli_configuration_error_does_not_echo_secret(monkeypatch, capsys):
 def test_no_command_does_not_claim_to_run_a_simulator(capsys):
     assert main([]) == 2
     assert "--check-config" in capsys.readouterr().out
+
+
+def test_cli_handles_legacy_windows_output_encoding():
+    env = {key: value for key, value in os.environ.items() if key not in live_env()}
+    env["PYTHONIOENCODING"] = "cp950"
+    result = subprocess.run(
+        [sys.executable, "-m", "telegram_business_bot", "--check-config"],
+        env=env,
+        capture_output=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    assert "Настройки корректны" in result.stdout.decode("utf-8")

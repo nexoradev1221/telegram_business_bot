@@ -8,6 +8,10 @@ from telegram_business_bot.config import ConfigurationError, Settings
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    # Redirected Windows streams can inherit a legacy code page without Cyrillic.
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8")
     parser = argparse.ArgumentParser(description="Бот заявок на ремонт техники")
     parser.add_argument("--check-config", action="store_true", help="Проверить настройки без сети")
     args = parser.parse_args(argv)
