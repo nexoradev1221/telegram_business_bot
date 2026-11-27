@@ -2,6 +2,7 @@
 
 from telegram_business_bot.storage.repository import (
     DispatcherAccessDenied,
+    NotificationJob,
     RequestRecord,
     RequestUnavailable,
     SchemaVersionError,
@@ -14,6 +15,7 @@ from telegram_business_bot.storage.repository import (
 
 __all__ = [
     "DispatcherAccessDenied",
+    "NotificationJob",
     "RequestRecord",
     "RequestUnavailable",
     "SchemaVersionError",

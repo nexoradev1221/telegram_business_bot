@@ -4,11 +4,13 @@ import argparse
 import asyncio
 import sys
 from collections.abc import Sequence
+from contextlib import suppress
 
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
 
 from telegram_business_bot.config import ConfigurationError, Settings
+from telegram_business_bot.notifications import AiogramNotificationTransport, OutboxWorker
 from telegram_business_bot.storage import SQLiteRepository, StorageError
 from telegram_business_bot.telegram_form import build_form_router
 
@@ -53,7 +55,23 @@ async def _run_live(settings: Settings, repository: SQLiteRepository) -> None:
     bot = Bot(token=settings.bot_token)
     dispatcher = Dispatcher(storage=MemoryStorage())
     dispatcher.include_router(build_form_router(repository, settings.service_timezone))
+    if settings.dispatcher_chat_id is None:
+        raise ConfigurationError("Для live нужен DISPATCHER_CHAT_ID.")
+    notification_task = asyncio.create_task(
+        OutboxWorker(
+            repository,
+            AiogramNotificationTransport(bot),
+            settings.dispatcher_chat_id,
+            settings.service_timezone,
+        ).run(),
+        name="dispatcher-outbox-worker",
+    )
     try:
         await dispatcher.start_polling(bot)
     finally:
-        await bot.session.close()
+        notification_task.cancel()
+        try:
+            with suppress(asyncio.CancelledError):
+                await notification_task
+        finally:
+            await bot.session.close()
