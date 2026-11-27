@@ -97,3 +97,60 @@ def test_cancel_clears_draft_without_storage(tmp_path):
             assert connection.execute("SELECT count(*) FROM requests").fetchone()[0] == 0
 
     asyncio.run(scenario())
+
+
+def test_review_edit_updates_only_selected_field_and_keeps_submission_key():
+    async def scenario():
+        handlers = handlers_for(SQLiteRepository("unused.sqlite3"), ZoneInfo("Asia/Vladivostok"))
+        state = FakeState(
+            {
+                "category": "washer",
+                "problem_summary": "Не работает слив воды",
+                "district": "central",
+                "visit_window": "2026-11-27 09:00-12:00",
+                "contact_preference": "telegram",
+                "contact_details": None,
+                "submission_key": "stable-reviewed-draft-key-01",
+            }
+        )
+        state.current = Form.review
+        message = FakeMessage("Описание")
+        await handlers["edit_start_handler"](message, state)
+        await handlers["edit_field_handler"](message, state)
+        message.text = "Не сливает воду после стирки"
+        await handlers["summary_handler"](message, state)
+        assert state.current == Form.review
+        assert state.data["problem_summary"] == message.text
+        assert state.data["submission_key"] == "stable-reviewed-draft-key-01"
+        assert message.text in message.answers[-1]
+
+    asyncio.run(scenario())
+
+
+def test_retried_consent_submission_returns_same_reference_once(tmp_path):
+    async def scenario():
+        timezone = ZoneInfo("Asia/Vladivostok")
+        repository = SQLiteRepository(tmp_path / "requests.sqlite3")
+        repository.initialize()
+        consent = handlers_for(repository, timezone)["consent_handler"]
+        day = (datetime.now(UTC).astimezone(timezone) + timedelta(days=1)).date()
+        data = {
+            "category": "washer",
+            "problem_summary": "Не работает слив воды",
+            "district": "central",
+            "visit_window": f"{day:%Y-%m-%d} 09:00-12:00",
+            "contact_preference": "telegram",
+            "contact_details": None,
+            "submission_key": "retry-stable-submission-key-01",
+        }
+        first, retry = FakeMessage("/consent_yes"), FakeMessage("/consent_yes")
+        await asyncio.gather(
+            consent(first, FakeState(data.copy())), consent(retry, FakeState(data.copy()))
+        )
+        first_reference = first.answers[0].split()[-1].rstrip(".")
+        retry_reference = retry.answers[0].split()[-1].rstrip(".")
+        assert first_reference == retry_reference
+        with sqlite3.connect(tmp_path / "requests.sqlite3") as connection:
+            assert connection.execute("SELECT count(*) FROM requests").fetchone()[0] == 1
+
+    asyncio.run(scenario())

@@ -22,6 +22,7 @@ class Form(StatesGroup):
     contact = State()
     phone = State()
     review = State()
+    edit = State()
     consent = State()
 
 
@@ -38,6 +39,15 @@ def build_form_router(repository: SQLiteRepository, timezone: ZoneInfo) -> Route
     router = Router(name="customer-request-form")
     categories = {label: key for key, label in CATEGORIES.items()}
     districts = {label: key for key, label in DISTRICTS.items()}
+
+    async def _resume_review(message: Message, state: FSMContext) -> bool:
+        data = await state.get_data()
+        if not data.get("editing"):
+            return False
+        await state.update_data(editing=False)
+        await state.set_state(Form.review)
+        await _show_review(message, state)
+        return True
 
     @router.message(Command("help"))
     async def help_handler(message: Message) -> None:
@@ -75,6 +85,8 @@ def build_form_router(repository: SQLiteRepository, timezone: ZoneInfo) -> Route
             )
             return
         await state.update_data(category=category)
+        if await _resume_review(message, state):
+            return
         await state.set_state(Form.summary)
         await message.answer(
             "Кратко опишите неисправность (от 5 до 1000 символов).",
@@ -90,6 +102,8 @@ def build_form_router(repository: SQLiteRepository, timezone: ZoneInfo) -> Route
             )
             return
         await state.update_data(problem_summary=summary)
+        if await _resume_review(message, state):
+            return
         await state.set_state(Form.district)
         await message.answer("Выберите район.", reply_markup=_keyboard(*DISTRICTS.values()))
 
@@ -102,6 +116,8 @@ def build_form_router(repository: SQLiteRepository, timezone: ZoneInfo) -> Route
             )
             return
         await state.update_data(district=district)
+        if await _resume_review(message, state):
+            return
         await state.set_state(Form.visit_window)
         await message.answer(
             "Предпочтительное окно визита (местное время): ГГГГ-ММ-ДД ЧЧ:ММ-ЧЧ:ММ. "
@@ -112,6 +128,8 @@ def build_form_router(repository: SQLiteRepository, timezone: ZoneInfo) -> Route
     @router.message(Form.visit_window)
     async def visit_handler(message: Message, state: FSMContext) -> None:
         await state.update_data(visit_window=message.text or "")
+        if await _resume_review(message, state):
+            return
         await state.set_state(Form.contact)
         await message.answer("Как с вами связаться?", reply_markup=_keyboard("Telegram", "Телефон"))
 
@@ -119,6 +137,8 @@ def build_form_router(repository: SQLiteRepository, timezone: ZoneInfo) -> Route
     async def contact_handler(message: Message, state: FSMContext) -> None:
         if message.text == "Telegram":
             await state.update_data(contact_preference="telegram", contact_details=None)
+            if await _resume_review(message, state):
+                return
             await state.set_state(Form.review)
             await _show_review(message, state)
         elif message.text == "Телефон":
@@ -136,6 +156,8 @@ def build_form_router(repository: SQLiteRepository, timezone: ZoneInfo) -> Route
     @router.message(Form.phone)
     async def phone_handler(message: Message, state: FSMContext) -> None:
         await state.update_data(contact_details=message.text or "")
+        if await _resume_review(message, state):
+            return
         await state.set_state(Form.review)
         await _show_review(message, state)
 
@@ -148,9 +170,56 @@ def build_form_router(repository: SQLiteRepository, timezone: ZoneInfo) -> Route
             "Проверьте заявку:\n"
             f"Техника: {category_label}\nОписание: {data['problem_summary']}\n"
             f"Район: {district_label}\nОкно: {data['visit_window']}\nСвязь: {contact}\n\n"
-            "Отправьте /confirm для продолжения или /cancel для отмены.",
+            "Отправьте /edit, чтобы изменить поле, /confirm для продолжения "
+            "или /cancel для отмены.",
             reply_markup=ReplyKeyboardRemove(),
         )
+
+    @router.message(Form.review, Command("edit"))
+    async def edit_start_handler(message: Message, state: FSMContext) -> None:
+        await state.set_state(Form.edit)
+        await message.answer(
+            "Какое поле изменить?",
+            reply_markup=_keyboard(
+                "Техника", "Описание", "Район", "Окно визита", "Способ связи", "Назад"
+            ),
+        )
+
+    @router.message(Form.edit)
+    async def edit_field_handler(message: Message, state: FSMContext) -> None:
+        field_states = {
+            "Техника": (Form.category, "Выберите категорию.", CATEGORIES.values()),
+            "Описание": (Form.summary, "Опишите неисправность заново.", ()),
+            "Район": (Form.district, "Выберите район.", DISTRICTS.values()),
+            "Окно визита": (
+                Form.visit_window,
+                "Введите новое окно: ГГГГ-ММ-ДД ЧЧ:ММ-ЧЧ:ММ.",
+                (),
+            ),
+            "Способ связи": (
+                Form.contact,
+                "Выберите Telegram или телефон.",
+                ("Telegram", "Телефон"),
+            ),
+        }
+        if message.text == "Назад":
+            await state.set_state(Form.review)
+            await _show_review(message, state)
+            return
+        selected = field_states.get(message.text or "")
+        if selected is None:
+            await message.answer(
+                "Выберите поле кнопкой ниже.",
+                reply_markup=_keyboard(
+                    "Техника", "Описание", "Район", "Окно визита", "Способ связи", "Назад"
+                ),
+            )
+            return
+        target_state, prompt, choices = selected
+        await state.update_data(editing=True)
+        await state.set_state(target_state)
+        markup = _keyboard(*choices) if choices else ReplyKeyboardRemove()
+        await message.answer(prompt, reply_markup=markup)
 
     @router.message(Form.review, Command("confirm"))
     async def confirm_handler(message: Message, state: FSMContext) -> None:
