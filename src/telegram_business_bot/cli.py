@@ -2,6 +2,7 @@
 
 import argparse
 import asyncio
+import os
 import sys
 from collections.abc import Sequence
 from contextlib import suppress
@@ -11,6 +12,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 
 from telegram_business_bot.config import ConfigurationError, Settings
 from telegram_business_bot.notifications import AiogramNotificationTransport, OutboxWorker
+from telegram_business_bot.simulator import run_demo
 from telegram_business_bot.storage import SQLiteRepository, StorageError
 from telegram_business_bot.telegram_form import build_form_router
 
@@ -21,15 +23,30 @@ def main(argv: Sequence[str] | None = None) -> int:
         if hasattr(stream, "reconfigure"):
             stream.reconfigure(encoding="utf-8")
     parser = argparse.ArgumentParser(description="Бот заявок на ремонт техники")
-    parser.add_argument("--check-config", action="store_true", help="Проверить настройки без сети")
+    actions = parser.add_mutually_exclusive_group()
+    actions.add_argument("--check-config", action="store_true", help="Проверить настройки без сети")
+    actions.add_argument("--demo", action="store_true", help="Запустить офлайн-сценарий без токена")
     args = parser.parse_args(argv)
+    if args.demo:
+        try:
+            settings = Settings.from_env(
+                {
+                    "BOT_MODE": "simulator",
+                    "SERVICE_TIMEZONE": os.environ.get("SERVICE_TIMEZONE", "Asia/Vladivostok"),
+                }
+            )
+            run_demo(settings.service_timezone)
+        except ConfigurationError as error:
+            print(str(error), file=sys.stderr)
+            return 2
+        return 0
     try:
         settings = Settings.from_env()
     except ConfigurationError as error:
         print(str(error), file=sys.stderr)
         return 2
     if not args.check_config and settings.mode == "simulator":
-        print("Симулятор будет доступен в следующем этапе. Используйте --check-config.")
+        print("Для офлайн-демонстрации используйте --demo; настройки: --check-config.")
         return 2
     if not args.check_config:
         repository = SQLiteRepository(
