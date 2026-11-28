@@ -6,7 +6,7 @@ import sqlite3
 from collections.abc import Callable, Collection, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, replace
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from telegram_business_bot.domain import (
@@ -61,6 +61,12 @@ class StatusChange:
     to_status: RequestStatus
     actor_user_id: int
     changed_at: datetime
+
+
+@dataclass(frozen=True, repr=False)
+class NotificationJob:
+    id: int
+    record: RequestRecord
 
 
 def _timestamp(value: datetime) -> str:
@@ -258,6 +264,70 @@ class SQLiteRepository:
             )
             row = connection.execute("SELECT * FROM requests WHERE id=?", (request_id,)).fetchone()
             return SubmissionResult(_record(row), True)
+
+    def pending_notifications(
+        self, *, now: datetime, limit: int = 20
+    ) -> tuple[NotificationJob, ...]:
+        if type(limit) is not int or not 1 <= limit <= 100:
+            raise ValueError("limit must be between 1 and 100")
+        timestamp = _timestamp(now)
+        with self._transaction() as connection:
+            rows = connection.execute(
+                """SELECT n.id AS outbox_id, r.* FROM notification_outbox n
+                   JOIN requests r ON r.id=n.request_id
+                   WHERE n.state='pending' AND n.next_attempt_at<=?
+                   ORDER BY n.id LIMIT ?""",
+                (timestamp, limit),
+            ).fetchall()
+            return tuple(NotificationJob(row["outbox_id"], _record(row)) for row in rows)
+
+    def mark_notification_sent(self, outbox_id: int, *, now: datetime) -> bool:
+        timestamp = _timestamp(now)
+        with self._transaction(write=True) as connection:
+            cursor = connection.execute(
+                """UPDATE notification_outbox SET state='sent', delivered_at=?, last_error_code=NULL
+                   WHERE id=? AND state='pending'""",
+                (timestamp, outbox_id),
+            )
+            return cursor.rowcount == 1
+
+    def mark_notification_failure(
+        self,
+        outbox_id: int,
+        *,
+        now: datetime,
+        error_code: str,
+        retry_after: int | None = None,
+        permanent: bool = False,
+    ) -> bool:
+        if not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", error_code):
+            raise ValueError("error_code must be a short safe identifier")
+        if retry_after is not None and (type(retry_after) is not int or retry_after < 0):
+            raise ValueError("retry_after must be a non-negative number of seconds")
+        delays = (30, 120, 600, 1800, 3600)
+        with self._transaction(write=True) as connection:
+            row = connection.execute(
+                "SELECT attempts FROM notification_outbox WHERE id=? AND state='pending'",
+                (outbox_id,),
+            ).fetchone()
+            if row is None:
+                return False
+            attempts = row["attempts"] + 1
+            terminal = permanent or attempts >= len(delays)
+            delay = max(delays[min(attempts - 1, len(delays) - 1)], retry_after or 0)
+            next_attempt = _timestamp(now + timedelta(seconds=delay))
+            cursor = connection.execute(
+                """UPDATE notification_outbox SET state=?, attempts=?, next_attempt_at=?,
+                   last_error_code=? WHERE id=? AND state='pending'""",
+                (
+                    "failed" if terminal else "pending",
+                    attempts,
+                    next_attempt,
+                    error_code,
+                    outbox_id,
+                ),
+            )
+            return cursor.rowcount == 1
 
     def get_for_customer(self, reference: str, customer_user_id: int) -> RequestRecord | None:
         """Enforce reference and owner in SQL; unavailable references return None."""
