@@ -15,6 +15,9 @@ telegram-business-bot = "telegram_business_bot.cli:main"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+telegram_business_bot = ["sample_request.json"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 
